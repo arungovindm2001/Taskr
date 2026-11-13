@@ -73,15 +73,29 @@ nonisolated final class NetworkSampler: @unchecked Sendable {
         }
     }
 
+    /// Column positions taken from the header line, so a leading "time" column (or its absence) doesn't matter.
+    private var processColumn = 0
+    private var inColumn = 1
+    private var outColumn = 2
+
     private func handle(_ line: String) {
-        // Each block starts with a header line like ",bytes_in,bytes_out,".
-        if line.isEmpty || line.hasPrefix(",") { commit(); return }
-        let f = line.split(separator: ",", omittingEmptySubsequences: false)
-        guard f.count >= 3,
-              let dot = f[0].lastIndex(of: "."),
-              let pid = Int32(f[0][f[0].index(after: dot)...]),
-              let bytesIn = Double(f[1]),
-              let bytesOut = Double(f[2]) else { return }
+        let f = line.split(separator: ",", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // Each block starts with a header line like "time,,bytes_in,bytes_out,".
+        if let bytesIn = f.firstIndex(of: "bytes_in"), let bytesOut = f.firstIndex(of: "bytes_out") {
+            commit()
+            inColumn = bytesIn
+            outColumn = bytesOut
+            processColumn = f.firstIndex(of: "") ?? 0
+            return
+        }
+
+        // Data row: "<time>,<name>.<pid>,<bytes_in>,<bytes_out>,"
+        guard f.count > max(processColumn, inColumn, outColumn),
+              let dot = f[processColumn].lastIndex(of: "."),
+              let pid = Int32(f[processColumn][f[processColumn].index(after: dot)...]),
+              let bytesIn = Double(f[inColumn]),
+              let bytesOut = Double(f[outColumn]) else { return }
         building[pid, default: 0] += bytesIn + bytesOut
     }
 
