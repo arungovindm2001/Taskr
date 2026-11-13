@@ -27,6 +27,7 @@ enum ProcessGrouping {
         let alive = Set(snapshots.map(\.pid))
         ProcessPaths.prune(alive: alive)
         ProcessOwners.prune(alive: alive)
+        ProcessArchitecture.prune(alive: alive)
         var groups: [String: ProcessGroup] = [:]
 
         for snapshot in snapshots {

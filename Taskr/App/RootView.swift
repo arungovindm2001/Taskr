@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var performance = PerformanceStore()
     /// Also lives here: sampling must keep running on every page so App history can record.
     @State private var processes = ProcessStore()
+    @State private var detailsFocus: Int32?
     @State private var history = AppHistoryStore()
     @State private var startup = StartupStore()
 
@@ -26,8 +27,9 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 260)
         } detail: {
             switch selection ?? .processes {
-            case .processes: ProcessesPage(store: processes, onGoToDetails: { _ in selection = .details })
+            case .processes: ProcessesPage(store: processes, onGoToDetails: { detailsFocus = $0.primaryPid; selection = .details })
             case .appHistory: AppHistoryPage(store: history)
+            case .details: DetailsPage(store: processes, focusPid: $detailsFocus)
             case .users: UsersPage(store: processes)
             case .startup: StartupPage(store: startup, history: history)
             case .performance: PerformancePage(store: performance)

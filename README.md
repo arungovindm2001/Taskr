@@ -250,6 +250,10 @@ Disable and Enable run `launchctl disable|enable gui/<uid>/<label>` for launch a
 
 Processes are grouped by owning account (`proc_pidinfo` uid, cached in `ProcessOwners`). Real accounts (uid 500+) get their own row; root and `_` service accounts roll into one "System" row. Each user's processes are listed as apps with CPU, memory, disk and network. The console user shows "Active". Taskr can only sample processes macOS lets it read, so other users' and root's processes may be missing. "Switch user…" shows the login window with `CGSession -suspend`.
 
+## How Details works
+
+One flat row per process: name, PID, status (Running / Not responding / Efficiency), owner, CPU, memory, architecture and a short description. Architecture is "Apple" for native arm64 code and "Intel" for x86-64 (Rosetta-translated or on an Intel Mac), read from the process's `P_TRANSLATED` flag. Description is the app name for app processes, otherwise "macOS process" or "Background process". Every column sorts, search matches name, PID or user, and "Go to Details" on the Processes page jumps here with that process selected.
+
 ## Status
 
 | Page | Status |
@@ -259,10 +263,11 @@ Processes are grouped by owning account (`proc_pidinfo` uid, cached in `ProcessO
 | App history | Done (records only while Taskr runs) |
 | Startup apps | Done (impact is an estimate) |
 | Users | Built |
-| Details, Services, Settings | Not built (placeholder) |
+| Details | Built |
+| Services, Settings | Not built (placeholder) |
 
 Planned next:
 
-- Details, Services and Settings pages.
+- Services and Settings pages.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.
