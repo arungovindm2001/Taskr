@@ -25,7 +25,7 @@ struct NetworkDetail: View {
                                               fill: GraphPalette.receiveFill, fillOpacity: 0.22),
                                   GraphSeries(values: store.netOut.values, line: GraphPalette.sendLine,
                                               fill: GraphPalette.sendFill, fillOpacity: 0.2)],
-                         height: 300, border: GraphPalette.receiveFill)
+                         minHeight: 220, border: GraphPalette.receiveFill)
         }
     }
 

@@ -28,7 +28,7 @@ struct DiskDetail: View {
                 GraphSection(title: "Active time", maxLabel: "100%", maxValue: 100,
                              series: [GraphSeries(values: history.active.values, line: GraphPalette.readLine,
                                                   fill: GraphPalette.readFill, fillOpacity: 0.22)],
-                             height: 150, border: GraphPalette.readFill)
+                             minHeight: 110, border: GraphPalette.readFill)
                 GraphSection(title: "Disk transfer rate",
                              legend: [LegendItem(color: GraphPalette.readFill, label: "Read"),
                                       LegendItem(color: GraphPalette.writeFill, label: "Write")],
@@ -37,7 +37,7 @@ struct DiskDetail: View {
                                                   fill: GraphPalette.readFill, fillOpacity: 0.2),
                                       GraphSeries(values: history.write.values, line: GraphPalette.writeLine,
                                                   fill: GraphPalette.writeFill, fillOpacity: 0.2)],
-                             height: 150, border: GraphPalette.readFill)
+                             minHeight: 110, border: GraphPalette.readFill)
             }
         }
     }

@@ -21,7 +21,7 @@ struct MemoryDetail: View {
                          maxValue: 100,
                          series: [GraphSeries(values: store.memory.values, line: GraphPalette.memoryLine,
                                               fill: GraphPalette.memoryFill, fillOpacity: 0.22)],
-                         height: 230, border: GraphPalette.memoryFill)
+                         minHeight: 180, border: GraphPalette.memoryFill)
         }
     }
 

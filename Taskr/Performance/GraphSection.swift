@@ -20,8 +20,10 @@ struct GraphSection: View {
     let maxLabel: String
     let maxValue: Double
     let series: [GraphSeries]
-    /// Fixed height in points; `nil` lets the graph fill the space it's given.
+    /// Fixed height in points; `nil` lets the graph grow to fill the space it's given.
     var height: CGFloat?
+    /// Smallest height when the graph is filling its space.
+    var minHeight: CGFloat = 100
     var border: Color = Color(nsColor: .separatorColor)
 
     var body: some View {
@@ -43,7 +45,7 @@ struct GraphSection: View {
             LiveGraph(series: series, maxValue: maxValue)
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .frame(maxHeight: height == nil ? .infinity : nil)
+                .frame(minHeight: height == nil ? minHeight : nil, maxHeight: height == nil ? .infinity : nil)
                 .background(Color(nsColor: .controlBackgroundColor))
                 .overlay(Rectangle().stroke(border, lineWidth: 1))
         }

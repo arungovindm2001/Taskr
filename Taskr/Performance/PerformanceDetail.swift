@@ -46,7 +46,7 @@ struct PerformanceDetail<Graphs: View>: View {
                 Text(subtitle).font(.system(size: 13)).foregroundStyle(.secondary)
             }
 
-            graphs
+            graphs.layoutPriority(1)
 
             Spacer(minLength: 0)
 

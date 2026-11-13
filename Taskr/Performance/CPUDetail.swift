@@ -24,7 +24,7 @@ struct CPUDetail: View {
                                               fill: GraphPalette.cpuFill, fillOpacity: 0.45),
                                   GraphSeries(values: store.cpuSystem.values, line: GraphPalette.systemLine,
                                               fill: GraphPalette.systemFill, fillOpacity: 0.55)],
-                         height: 320, border: GraphPalette.cpuLine)
+                         minHeight: 240, border: GraphPalette.cpuLine)
         }
     }
 
