@@ -2,7 +2,7 @@
 
 A native macOS task manager that copies the structure of the Windows Task Manager (Processes, Performance, App history, Startup apps, Users, Details, Services, Settings) and looks like it belongs on a Mac. It is written in pure Swift and SwiftUI, with no web view, no Rust core and no third-party dependencies.
 
-The Processes and Performance pages are complete. The other pages are placeholders. See [Status](#status).
+The Processes, Performance and App history pages are complete. The other pages are placeholders. See [Status](#status).
 
 ## Contents
 
@@ -70,6 +70,10 @@ Taskr/                       Repository root (Xcode project lives here)
     │   ├── RootView.swift           Sidebar + detail navigation
     │   ├── Page.swift               The pages (title, SF Symbol)
     │   └── ShellPage.swift          Placeholder for pages not built yet
+    ├── AppHistory/
+    │   ├── AppHistoryPage.swift     Table of cumulative usage per app, with scope menu and delete
+    │   ├── AppHistoryStore.swift    Records usage once a second and saves it to Application Support
+    │   └── AppUsage.swift           Per-app running totals and the on-disk format
     ├── Model/
     │   ├── ProcessCategory.swift    Apps / Background / macOS sections
     │   ├── ProcessGroup.swift       A group of related processes (one row)
@@ -204,6 +208,12 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 - *Sample Process*: runs `/usr/bin/sample <pid> 3` and opens the report.
 - *Run new task*: opens a path with its default app, or runs the text as a shell command (optionally with administrator privileges via AppleScript).
 
+## How App history works
+
+`AppHistoryStore` reads the live `ProcessStore` once a second and adds that second's CPU time (CPU share × logical cores), network bytes, disk writes and energy (watts × seconds) to each group's running totals. The totals are saved as JSON in `~/Library/Application Support/Taskr/app-history.json` every 30 seconds and when the app quits. "Delete usage history" clears them and restarts the "since" date. The Energy impact column is the app's average power over the time it was running, mapped to the same five levels as the Processes page.
+
+macOS has no system-wide usage log like Windows' App history, so Taskr only counts time while it is running. `ProcessStore` and `AppHistoryStore` live in `RootView` so recording continues on every page.
+
 ## Permissions and limitations
 
 - **No App Sandbox.** Required to read other processes' statistics. Taskr is therefore not suitable for the Mac App Store as it stands.
@@ -228,10 +238,11 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 |---|---|
 | Processes | Done |
 | Performance (CPU, Memory, Disk, Network, GPU) | Done |
-| App history, Startup apps, Users, Details, Services, Settings | Not built (placeholder) |
+| App history | Done (records only while Taskr runs) |
+| Startup apps, Users, Details, Services, Settings | Not built (placeholder) |
 
 Planned next:
 
-- App history, Startup apps, Users, Details, Services and Settings pages.
+- Startup apps, Users, Details, Services and Settings pages.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.
