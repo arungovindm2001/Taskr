@@ -254,6 +254,10 @@ Processes are grouped by owning account (`proc_pidinfo` uid, cached in `ProcessO
 
 One flat row per process: name, PID, status (Running / Not responding / Efficiency), owner, CPU, memory, architecture and a short description. Architecture is "Apple" for native arm64 code and "Intel" for x86-64 (Rosetta-translated or on an Intel Mac), read from the process's `P_TRANSLATED` flag. Description is the app name for app processes, otherwise "macOS process" or "Background process". Every column sorts, search matches name, PID or user, and "Go to Details" on the Processes page jumps here with that process selected.
 
+## How Services works
+
+Lists launchd jobs from `launchctl print system` and `launchctl print gui/<uid>` (the `services = { … }` block), refreshed every 3 seconds. Status is Running when the job has a PID. Description comes from the job's launchd plist (the app or program it runs), falling back to a shortened label. Per-launch `application.*` jobs are hidden. Start, Stop and Restart use `launchctl kickstart` and `launchctl kill SIGTERM`; system-domain jobs ask for an administrator password through the standard macOS prompt. The Domain menu filters to system or your user domain.
+
 ## Status
 
 | Page | Status |
@@ -264,10 +268,11 @@ One flat row per process: name, PID, status (Running / Not responding / Efficien
 | Startup apps | Done (impact is an estimate) |
 | Users | Built |
 | Details | Built |
-| Services, Settings | Not built (placeholder) |
+| Services | Built |
+| Settings | Not built (placeholder) |
 
 Planned next:
 
-- Services and Settings pages.
+- Settings page.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.

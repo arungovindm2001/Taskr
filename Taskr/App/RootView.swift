@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var detailsFocus: Int32?
     @State private var history = AppHistoryStore()
     @State private var startup = StartupStore()
+    @State private var services = ServicesStore()
 
     var body: some View {
         NavigationSplitView {
@@ -30,6 +31,7 @@ struct RootView: View {
             case .processes: ProcessesPage(store: processes, onGoToDetails: { detailsFocus = $0.primaryPid; selection = .details })
             case .appHistory: AppHistoryPage(store: history)
             case .details: DetailsPage(store: processes, focusPid: $detailsFocus)
+            case .services: ServicesPage(store: services)
             case .users: UsersPage(store: processes)
             case .startup: StartupPage(store: startup, history: history)
             case .performance: PerformancePage(store: performance)
