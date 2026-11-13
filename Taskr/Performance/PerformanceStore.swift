@@ -67,6 +67,8 @@ final class PerformanceStore {
             if tick % 5 == 4 {   // addresses, signal and free space change slowly
                 network = NetworkInfo.read()
                 disks = await Task.detached { PhysicalDisks.list() }.value
+                let present = Set(disks.map(\.id))
+                diskHistory = diskHistory.filter { present.contains($0.key) }   // forget unplugged disks
             }
             tick += 1
             try? await Task.sleep(for: .seconds(1))

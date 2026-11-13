@@ -69,7 +69,7 @@ nonisolated enum PhysicalDisks {
 
     // MARK: Public
 
-    /// Every physical disk with its mounted volumes, internal disks first. Blocking: call off the main thread.
+    /// Every physical disk that has a volume mounted, internal disks first. Blocking: call off the main thread.
     static func list() -> [PhysicalDisk] {
         var disks: [UInt64: PhysicalDisk] = [:]
         forEachDriver { driver, media in
@@ -92,7 +92,9 @@ nonisolated enum PhysicalDisks {
             disks[driverID]?.volumes.append(volume)
         }
 
-        return disks.values.sorted {
+        // A disk with nothing mounted (ejected, or unplugged but its driver hasn't left the registry yet) is gone
+        // as far as the user is concerned, so it isn't listed.
+        return disks.values.filter { !$0.volumes.isEmpty }.sorted {
             $0.isInternal != $1.isInternal ? $0.isInternal : $0.id.localizedStandardCompare($1.id) == .orderedAscending
         }
     }
