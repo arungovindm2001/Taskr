@@ -9,7 +9,8 @@ import SwiftUI
 
 /// The Processes page. A thin shell that wires the store to the table header, rows, toolbar and sheets.
 struct ProcessesPage: View {
-    @State private var store = ProcessStore()
+    /// Owned by `RootView` so sampling (and App history recording) continues on other pages.
+    let store: ProcessStore
     @State private var query = ""
     @State private var showRunSheet = false
     @State private var infoTarget: ProcessTarget?
@@ -17,7 +18,8 @@ struct ProcessesPage: View {
     /// Called when the user chooses "Go to Details" on a row.
     var onGoToDetails: (ProcessTarget) -> Void
 
-    init(onGoToDetails: @escaping (ProcessTarget) -> Void = { _ in }) {
+    init(store: ProcessStore, onGoToDetails: @escaping (ProcessTarget) -> Void = { _ in }) {
+        self.store = store
         self.onGoToDetails = onGoToDetails
     }
 
@@ -50,7 +52,6 @@ struct ProcessesPage: View {
             }
         }
         .sheet(item: $infoTarget) { ProcessInfoSheet(target: $0) }
-        .task { await store.run() }
     }
 
     // MARK: Toolbar
