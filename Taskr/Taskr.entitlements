@@ -5,5 +5,8 @@
     <!-- Must be off: a sandboxed app cannot read other processes' stats via libproc. -->
     <key>com.apple.security.app-sandbox</key>
     <false/>
+    <!-- Lets Taskr ask System Events for the list of login items (hardened runtime blocks Apple events otherwise). -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
 </dict>
 </plist>

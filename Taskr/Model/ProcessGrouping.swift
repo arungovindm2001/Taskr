@@ -14,7 +14,7 @@ enum ProcessGrouping {
     private static let systemPrefixes = ["/System/", "/usr/", "/sbin/", "/bin/", "/Library/Apple/", "/private/var/"]
 
     /// The outermost `.app` bundle containing an executable, e.g. `/Applications/Claude.app`, or `nil`.
-    static func bundlePath(_ executable: String) -> String? {
+    nonisolated static func bundlePath(_ executable: String) -> String? {
         guard let range = executable.range(of: ".app/") else { return nil }
         return String(executable[..<range.lowerBound]) + ".app"
     }

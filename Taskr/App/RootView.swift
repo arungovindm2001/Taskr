@@ -15,6 +15,7 @@ struct RootView: View {
     /// Also lives here: sampling must keep running on every page so App history can record.
     @State private var processes = ProcessStore()
     @State private var history = AppHistoryStore()
+    @State private var startup = StartupStore()
 
     var body: some View {
         NavigationSplitView {
@@ -27,6 +28,7 @@ struct RootView: View {
             switch selection ?? .processes {
             case .processes: ProcessesPage(store: processes, onGoToDetails: { _ in selection = .details })
             case .appHistory: AppHistoryPage(store: history)
+            case .startup: StartupPage(store: startup, history: history)
             case .performance: PerformancePage(store: performance)
             case let p: ShellPage(page: p)
             }

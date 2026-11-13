@@ -2,7 +2,7 @@
 
 A native macOS task manager that copies the structure of the Windows Task Manager (Processes, Performance, App history, Startup apps, Users, Details, Services, Settings) and looks like it belongs on a Mac. It is written in pure Swift and SwiftUI, with no web view, no Rust core and no third-party dependencies.
 
-The Processes, Performance and App history pages are complete. The other pages are placeholders. See [Status](#status).
+The Processes, Performance, App history and Startup apps pages are complete. The other pages are placeholders. See [Status](#status).
 
 ## Contents
 
@@ -74,6 +74,11 @@ Taskr/                       Repository root (Xcode project lives here)
     │   ├── AppHistoryPage.swift     Table of cumulative usage per app, with scope menu and delete
     │   ├── AppHistoryStore.swift    Records usage once a second and saves it to Application Support
     │   └── AppUsage.swift           Per-app running totals and the on-disk format
+    ├── Startup/
+    │   ├── StartupPage.swift        Table of startup items with Disable / Enable and Show in Finder
+    │   ├── StartupStore.swift       Item list, selection, toggling and the impact estimate
+    │   ├── StartupScanner.swift     Reads launch agents, login items, signatures and launchd state
+    │   └── StartupItem.swift        One startup item
     ├── Model/
     │   ├── ProcessCategory.swift    Apps / Background / macOS sections
     │   ├── ProcessGroup.swift       A group of related processes (one row)
@@ -214,6 +219,14 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 
 macOS has no system-wide usage log like Windows' App history, so Taskr only counts time while it is running. `ProcessStore` and `AppHistoryStore` live in `RootView` so recording continues on every page.
 
+## How Startup apps works
+
+`StartupScanner` lists two kinds of item. **Launch agents** are the plists in `~/Library/LaunchAgents` and `/Library/LaunchAgents` that run at load or stay alive; whether each is switched off comes from `launchctl print-disabled gui/<uid>`. **Login items** are the entries under System Settings ▸ General ▸ Login Items ▸ Open at Login, read from System Events with `osascript` (macOS asks for Automation permission the first time; if it's refused, no login items are listed). The developer is the signer's name from the item's code signature.
+
+Disable and Enable run `launchctl disable|enable gui/<uid>/<label>` for launch agents, and take effect at the next login. Login items can't be toggled from here, because macOS offers no way to disable them short of removing them.
+
+**Startup impact is an estimate.** Taskr can't observe the login itself, so impact is the item's average CPU use while Taskr has been recording it (from App history): None, Low, Medium or High, and "Not measured" until 30 seconds of data exist or when the item isn't running.
+
 ## Permissions and limitations
 
 - **No App Sandbox.** Required to read other processes' statistics. Taskr is therefore not suitable for the Mac App Store as it stands.
@@ -223,6 +236,7 @@ macOS has no system-wide usage log like Windows' App history, so Taskr only coun
 - **Performance page gaps.** Without root, macOS exposes no CPU clock speed or temperature on Apple silicon, so the CPU page shows the load average and the thermal state instead. GPU frequency, power state and media engine load are likewise unavailable. The renderer and tiler graphs appear only if the GPU driver reports them.
 - **Disk active time** is the share of each second that requests were in flight. The driver adds up the time of concurrent requests, so a busy SSD with deep queues can read higher than Activity Monitor or Windows would.
 - **Wi-Fi network name** needs Location permission, so it shows "–" until that is granted.
+- **Startup apps** does not list launch daemons (they run as root at boot), and items registered through the newer Background Items mechanism (`SMAppService`) only appear if they are also launch agents or login items.
 - **App Nap** is not shown in the Status column.
 
 ## Conventions
@@ -239,10 +253,11 @@ macOS has no system-wide usage log like Windows' App history, so Taskr only coun
 | Processes | Done |
 | Performance (CPU, Memory, Disk, Network, GPU) | Done |
 | App history | Done (records only while Taskr runs) |
-| Startup apps, Users, Details, Services, Settings | Not built (placeholder) |
+| Startup apps | Done (impact is an estimate) |
+| Users, Details, Services, Settings | Not built (placeholder) |
 
 Planned next:
 
-- Startup apps, Users, Details, Services and Settings pages.
+- Users, Details, Services and Settings pages.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.
