@@ -7,19 +7,15 @@
 
 import SwiftUI
 
-/// The 12 pages, mirroring Windows Task Manager (Performance is split into its sub-pages).
+/// The pages, mirroring Windows Task Manager's tabs (Performance holds CPU, Memory, Disk, Network and GPU).
 enum Page: String, CaseIterable, Identifiable {
-    case processes, cpu, memory, disk, network, gpu, appHistory, startup, users, details, services, settings
+    case processes, performance, appHistory, startup, users, details, services, settings
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .processes: "Processes"
-        case .cpu: "CPU"
-        case .memory: "Memory"
-        case .disk: "Disk"
-        case .network: "Network"
-        case .gpu: "GPU"
+        case .performance: "Performance"
         case .appHistory: "App history"
         case .startup: "Startup apps"
         case .users: "Users"
@@ -32,27 +28,13 @@ enum Page: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .processes: "list.bullet.rectangle"
-        case .cpu: "cpu"
-        case .memory: "memorychip"
-        case .disk: "internaldrive"
-        case .network: "network"
-        case .gpu: "display"
+        case .performance: "chart.line.uptrend.xyaxis"
         case .appHistory: "clock.arrow.circlepath"
         case .startup: "power"
         case .users: "person.2"
         case .details: "tablecells"
         case .services: "gearshape.2"
         case .settings: "gearshape"
-        }
-    }
-
-    /// Sidebar section a page belongs to.
-    enum Group: String, CaseIterable { case main, performance, system }
-    var group: Group {
-        switch self {
-        case .processes: .main
-        case .cpu, .memory, .disk, .network, .gpu: .performance
-        default: .system
         }
     }
 }

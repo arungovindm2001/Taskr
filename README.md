@@ -2,7 +2,7 @@
 
 A native macOS task manager that copies the structure of the Windows Task Manager (Processes, Performance, App history, Startup apps, Users, Details, Services, Settings) and looks like it belongs on a Mac. It is written in pure Swift and SwiftUI, with no web view, no Rust core and no third-party dependencies.
 
-The Processes page is complete. The other pages are placeholders. See [Status](#status).
+The Processes and Performance pages are complete. The other pages are placeholders. See [Status](#status).
 
 ## Contents
 
@@ -68,7 +68,7 @@ Taskr/                       Repository root (Xcode project lives here)
     ├── App/
     │   ├── TaskrApp.swift           @main entry point; one window
     │   ├── RootView.swift           Sidebar + detail navigation
-    │   ├── Page.swift               The 12 pages (title, SF Symbol, sidebar group)
+    │   ├── Page.swift               The pages (title, SF Symbol)
     │   └── ShellPage.swift          Placeholder for pages not built yet
     ├── Model/
     │   ├── ProcessCategory.swift    Apps / Background / macOS sections
@@ -89,8 +89,26 @@ Taskr/                       Repository root (Xcode project lives here)
     │   ├── ProcessActions.swift         End task, Efficiency mode, Sample, Reveal, Run task
     │   ├── RunTaskSheet.swift           "Create new task" dialog
     │   └── ProcessInfoSheet.swift       "Get Info" dialog
+    ├── Performance/
+    │   ├── PerformancePage.swift        Device list (left) and selected detail (right)
+    │   ├── DeviceCard.swift             One device card with a mini graph
+    │   ├── PerformanceDetail.swift      Shared detail layout: title, graphs, stats, facts
+    │   ├── CPUDetail.swift / MemoryDetail.swift / DiskDetail.swift / NetworkDetail.swift / GPUDetail.swift
+    │   ├── LiveGraph.swift              Canvas area graph (60 s window)
+    │   ├── GraphSection.swift           Titled graph with legend and maximum label
+    │   ├── PerformanceStore.swift       Observable histories and the 1 Hz sampling loop
+    │   ├── PerformanceStore+Summary.swift  Device card summaries and titles
+    │   ├── MetricHistory.swift          Fixed-length ring of readings
+    │   ├── PerformanceDevice.swift      Device list and graph palette
+    │   └── PerformanceFormat.swift      Rates, sizes, uptime, thermal state
     ├── Sampling/
-    │   ├── SystemStats.swift        Whole-machine CPU, memory, disk, network
+    │   ├── SystemStats.swift        Whole-machine CPU, memory breakdown, disk, network
+    │   ├── Sysctl.swift             Typed sysctl reads
+    │   ├── HardwareInfo.swift       Chip name, core layout, RAM, page size
+    │   ├── StorageInfo.swift        Startup volume capacity, format, FileVault
+    │   ├── NetworkInfo.swift        Primary adapter, addresses, Wi-Fi details
+    │   ├── GPUDevice.swift          Whole-GPU utilization, memory, Metal info
+    │   ├── ProcessCounts.swift      Process and thread totals
     │   ├── NetworkSampler.swift     Per-process network via nettop
     │   ├── GPUSampler.swift         Per-process GPU via IORegistry
     │   ├── EnergySampler.swift      Per-process power via rusage
@@ -152,6 +170,21 @@ Key decisions:
 
 Why the header totals don't sum the rows: per-process memory footprints overlap (shared and compressed pages), so their sum can exceed 100% of RAM. The machine-wide counters above match Activity Monitor.
 
+### Performance page sources
+
+| Value | Source |
+|---|---|
+| CPU user / system / total | `host_statistics` tick deltas |
+| Memory in use, wired, compressed, cached | `host_statistics64`; swap from `vm.swapusage`; pressure from `kern.memorystatus_vm_pressure_level` |
+| Disk active time, throughput, response time | IOKit `IOBlockStorageDriver` statistics (bytes, operations, total time) |
+| Capacity, available, format | `URLResourceValues` on `/`; FileVault from `fdesetup status` |
+| Network throughput | `sysctl(NET_RT_IFLIST2)` on `en*` |
+| Adapter, IP addresses, Wi-Fi standard and signal | `getifaddrs`, CoreWLAN |
+| GPU utilization, renderer, tiler, memory | IORegistry `IOAccelerator` `PerformanceStatistics`; core count and name via Metal |
+| Chip, cores, architecture | `machdep.cpu.brand_string`, `hw.perflevel*`, `hw.optional.arm64` |
+
+`PerformanceStore` lives in `RootView` so graph history keeps accumulating while another page is open.
+
 ## How the Processes page works
 
 **Grouping** (`ProcessGrouping`). Each process's executable path is read with `proc_pidpath`. The outermost `.app` bundle in the path becomes the group, so helpers fold into their parent app.
@@ -176,6 +209,8 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 - **Private API for "Not responding".** `CGSEventIsAppUnresponsive` is an undocumented WindowServer call (the same one Activity Monitor uses). `GetProcessForPID` is marked unavailable in Swift, so Taskr looks it up at runtime with `dlsym`. If either call disappears in a future macOS release, the Status column simply stops showing "Not responding".
 - **Other users' processes.** macOS only lets you change priority of, signal or sample processes you own. Taskr shows a message when an action is refused. Some processes report no path or no statistics.
 - **`nettop` per-process network** relies on a system tool whose output format could change. Totals in the header do not depend on it.
+- **Performance page gaps.** Without root, macOS exposes no CPU clock speed or temperature on Apple silicon, so the CPU page shows the load average and the thermal state instead. GPU frequency, power state and media engine load are likewise unavailable. The renderer and tiler graphs appear only if the GPU driver reports them.
+- **Wi-Fi network name** needs Location permission, so it shows "–" until that is granted.
 - **App Nap** is not shown in the Status column.
 
 ## Conventions
@@ -190,11 +225,11 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 | Page | Status |
 |---|---|
 | Processes | Done |
-| CPU, Memory, Disk, Network, GPU (Performance) | Not built (placeholder) |
+| Performance (CPU, Memory, Disk, Network, GPU) | Done |
 | App history, Startup apps, Users, Details, Services, Settings | Not built (placeholder) |
 
 Planned next:
 
-- Performance pages with live graphs, built on the same samplers.
+- App history, Startup apps, Users, Details, Services and Settings pages.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.
