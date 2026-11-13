@@ -56,7 +56,7 @@ struct UserEntry: Identifiable {
 
     private static func displayName(_ uid: uid_t) -> String {
         if uid == 0 { return "System" }
-        return getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? "uid \(uid)"
+        return UserNames.display(uid)
     }
 
     private static func status(_ uid: uid_t, console: uid_t) -> String {

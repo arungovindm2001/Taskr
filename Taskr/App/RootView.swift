@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Sidebar (Processes … Services, then Settings) plus the detail page for the current selection.
 struct RootView: View {
-    @State private var selection: Page? = .processes
+    @State private var selection: Page? = AppPrefs.shared.startPage
     /// Lives here so the graphs keep their history while another page is showing.
     @State private var performance = PerformanceStore()
     /// Also lives here: sampling must keep running on every page so App history can record.
@@ -35,9 +35,11 @@ struct RootView: View {
             case .users: UsersPage(store: processes)
             case .startup: StartupPage(store: startup, history: history)
             case .performance: PerformancePage(store: performance)
+            case .settings: SettingsPage(history: history)
             case let p: ShellPage(page: p)
             }
         }
+        .onAppear { AppPrefs.shared.applyAll() }
         .task { await performance.run() }
         .task { await processes.run() }
         .task { await history.run(from: processes) }

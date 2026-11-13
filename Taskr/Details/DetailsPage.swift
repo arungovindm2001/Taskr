@@ -204,13 +204,7 @@ struct DetailsPage: View {
         return rows.sorted { ascending ? order($0, $1) : order($1, $0) }
     }
 
-    private static var userNames: [uid_t: String] = [:]
-    private static func userName(_ uid: uid_t) -> String {
-        if let hit = userNames[uid] { return hit }
-        let name = getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? "uid \(uid)"
-        userNames[uid] = name
-        return name
-    }
+    private static func userName(_ uid: uid_t) -> String { UserNames.display(uid) }
 
     private func selectedTarget() -> ProcessTarget? {
         guard let selection else { return nil }

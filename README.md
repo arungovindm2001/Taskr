@@ -258,6 +258,18 @@ One flat row per process: name, PID, status (Running / Not responding / Efficien
 
 Lists launchd jobs from `launchctl print system` and `launchctl print gui/<uid>` (the `services = { … }` block), refreshed every 3 seconds. Status is Running when the job has a PID. Description comes from the job's launchd plist (the app or program it runs), falling back to a shortened label. Per-launch `application.*` jobs are hidden. Start, Stop and Restart use `launchctl kickstart` and `launchctl kill SIGTERM`; system-domain jobs ask for an administrator password through the standard macOS prompt. The Domain menu filters to system or your user domain.
 
+## How Settings works
+
+Preferences live in `AppPrefs` (UserDefaults, observable) and take effect immediately:
+
+- **Default start page**: the page Taskr opens to.
+- **Window management**: float above other windows; show in the Dock; keep running in the menu bar when the window is closed (a small menu bar item with Open Taskr and Quit). Hiding the Dock icon forces the menu bar item on, so the app stays reachable. With the menu bar item off, closing the window quits Taskr.
+- **Refresh interval**: High (0.5 s), Normal (1 s), Low (4 s) or Paused, for process, performance and App history sampling. Graphs on the Performance page keep one point per sample, so they cover less or more time at High or Low. Paused also stops App history recording.
+- **Theme**: match system, light or dark.
+- **Other options**: full or short user names (Users and Details), App history scope (apps or all processes), confirm before ending a task, and which optional Processes columns (Disk, Network, GPU, Energy impact) are shown.
+
+There is no "Show processes from all users" option: macOS only lets an unprivileged app read its own user's processes, so it would do nothing.
+
 ## Status
 
 | Page | Status |
@@ -269,10 +281,9 @@ Lists launchd jobs from `launchctl print system` and `launchctl print gui/<uid>`
 | Users | Built |
 | Details | Built |
 | Services | Built |
-| Settings | Not built (placeholder) |
+| Settings | Built |
 
 Planned next:
 
-- Settings page.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.

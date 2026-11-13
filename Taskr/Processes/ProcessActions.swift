@@ -44,6 +44,7 @@ enum ProcessActions {
 
     /// Asks before ending a task. The "Force quit" checkbox is pre-ticked when `force` is `true`.
     static func confirmEnd(_ target: ProcessTarget, force: Bool = false) {
+        guard AppPrefs.shared.confirmEnd else { end(target, force: force); return }
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Do you want to end “\(target.title)”?"

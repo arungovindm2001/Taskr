@@ -67,7 +67,7 @@ final class ProcessStore {
         netSampler.start()
         _ = await sampler.sample()   // prime the per-process deltas
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(1))
+            guard await AppPrefs.shared.tick() else { continue }
             let snapshots = await sampler.sample()
             refresh(with: snapshots)
         }

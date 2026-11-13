@@ -97,23 +97,29 @@ struct ProcessRowView: View {
         valueCell(ProcessFormat.rowPercent(m.cpu), width: ProcessColumn.cpu, tier: Heat.tier(m.cpu, Heat.cpu))
         valueCell(ProcessFormat.memory(m.memory, asPercent: store.memoryAsPercent, installed: store.physicalMemory),
                   width: ProcessColumn.memory, tier: Heat.tier(Double(m.memory) / 1e6, Heat.memoryMB))
-        valueCell(ProcessFormat.disk(m.disk), width: ProcessColumn.disk, tier: Heat.tier(m.disk / 1e6, Heat.diskMBps))
+        if AppPrefs.shared.isVisible(.disk) {
+            valueCell(ProcessFormat.disk(m.disk), width: ProcessColumn.disk, tier: Heat.tier(m.disk / 1e6, Heat.diskMBps))
+        }
 
-        if store.networkReady {
+        if !AppPrefs.shared.isVisible(.network) {
+            EmptyView()
+        } else if store.networkReady {
             valueCell(ProcessFormat.network(m.network), width: ProcessColumn.network,
                       tier: Heat.tier(m.network * 8 / 1e6, Heat.networkMbps))
         } else {
             valueCell("–", width: ProcessColumn.network, tier: 0, dim: true)
         }
 
-        if store.gpuReady {
+        if !AppPrefs.shared.isVisible(.gpu) {
+            EmptyView()
+        } else if store.gpuReady {
             valueCell(m.gpu < 0.05 ? "0%" : ProcessFormat.rowPercent(m.gpu), width: ProcessColumn.gpu,
                       tier: Heat.tier(m.gpu, Heat.gpu), dim: m.gpu < 0.05)
         } else {
             valueCell("–", width: ProcessColumn.gpu, tier: 0, dim: true)
         }
 
-        energyCell(m)
+        if AppPrefs.shared.isVisible(.energy) { energyCell(m) }
     }
 
     private func energyCell(_ m: ProcessRow.Metrics) -> some View {

@@ -32,7 +32,7 @@ final class AppHistoryStore {
     private(set) var apps: [String: AppUsage] = [:]
     /// When recording began (or was last cleared).
     private(set) var since = Date()
-    var scope: AppHistoryScope = .apps
+    var scope: AppHistoryScope = AppPrefs.shared.historyAllProcesses ? .all : .apps
     var sortKey: AppHistorySort = .cpuTime
 
     // MARK: Private
@@ -57,7 +57,7 @@ final class AppHistoryStore {
         lastTick = DispatchTime.now().uptimeNanoseconds
         var ticks = 0
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(1))
+            guard await AppPrefs.shared.tick() else { lastTick = DispatchTime.now().uptimeNanoseconds; continue }
             let now = DispatchTime.now().uptimeNanoseconds
             record(source, seconds: Double(now - lastTick) / 1e9)
             lastTick = now
@@ -68,7 +68,7 @@ final class AppHistoryStore {
 
     /// Adds `seconds` of the store's current rates to every group.
     private func record(_ source: ProcessStore, seconds: Double) {
-        guard seconds > 0, seconds < 5 else { return }   // skip gaps from sleep or a stalled loop
+        guard seconds > 0, seconds < 10 else { return }   // skip gaps from sleep or a stalled loop
         for group in source.groups {
             var usage = apps[group.id] ?? AppUsage(id: group.id, name: group.name,
                                                    category: group.category.rawValue, iconPath: group.iconPath)

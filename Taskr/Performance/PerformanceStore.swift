@@ -63,6 +63,10 @@ final class PerformanceStore {
 
         var tick = 0
         while !Task.isCancelled {
+            guard let interval = AppPrefs.shared.refresh.seconds else {
+                try? await Task.sleep(for: .milliseconds(500))
+                continue
+            }
             sample()
             if tick % 5 == 4 {   // addresses, signal and free space change slowly
                 network = NetworkInfo.read()
@@ -71,7 +75,7 @@ final class PerformanceStore {
                 diskHistory = diskHistory.filter { present.contains($0.key) }   // forget unplugged disks
             }
             tick += 1
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: .seconds(interval))
         }
     }
 

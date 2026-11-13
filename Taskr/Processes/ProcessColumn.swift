@@ -20,5 +20,9 @@ enum ProcessColumn {
     static let headerHeight: CGFloat = 56
 
     /// Combined width of the metric columns (CPU through Energy), used to pad section-header rows.
-    static let metricsWidth = cpu + memory + disk + network + gpu + energy
+    static var metricsWidth: CGFloat {
+        let prefs = AppPrefs.shared
+        return cpu + memory + (prefs.isVisible(.disk) ? disk : 0) + (prefs.isVisible(.network) ? network : 0)
+            + (prefs.isVisible(.gpu) ? gpu : 0) + (prefs.isVisible(.energy) ? energy : 0)
+    }
 }

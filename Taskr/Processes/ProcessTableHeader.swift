@@ -28,15 +28,23 @@ struct ProcessTableHeader: View {
                  tier: Heat.tier(totals.cpu, Heat.cpuTotal))
             cell("Memory", total: ProcessFormat.percent(totals.memoryPercent), key: .memory, width: ProcessColumn.memory,
                  align: .trailing, tier: Heat.tier(totals.memoryPercent, Heat.memoryTotalPct))
+            if AppPrefs.shared.isVisible(.disk) {
             cell("Disk", total: ProcessFormat.disk(totals.disk), key: .disk, width: ProcessColumn.disk, align: .trailing,
                  tier: Heat.tier(totals.disk / 1e6, Heat.diskTotalMBps))
+            }
+            if AppPrefs.shared.isVisible(.network) {
             cell("Network", total: totals.network.map { ProcessFormat.network($0) } ?? "–", key: .network,
                  width: ProcessColumn.network, align: .trailing,
                  tier: totals.network.map { Heat.tier($0 * 8 / 1e6, Heat.networkTotalMbps) } ?? 0)
+            }
+            if AppPrefs.shared.isVisible(.gpu) {
             cell("GPU", total: store.gpuReady ? ProcessFormat.percent(gpuTotal) : "–", key: .gpu,
                  width: ProcessColumn.gpu, align: .trailing,
                  tier: store.gpuReady ? Heat.tier(gpuTotal, Heat.gpuTotal) : 0)
+            }
+            if AppPrefs.shared.isVisible(.energy) {
             cell("Energy impact", total: nil, key: .energy, width: ProcessColumn.energy, align: .leading, tier: 0, leading: 8)
+            }
         }
         .frame(height: ProcessColumn.headerHeight)
         .background(Color(nsColor: .windowBackgroundColor))
