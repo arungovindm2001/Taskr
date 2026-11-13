@@ -21,10 +21,11 @@ enum ProcessFormat {
         bytesPerSecond < 1 ? "0 MB/s" : String(format: "%.1f MB/s", bytesPerSecond / 1e6)
     }
 
-    /// "3.4 Mbps", or "0 Mbps" below 0.05 Mbps.
+    /// "3.4 Mbps", "306 Mbps" (no decimal from 100 up, like Windows), or "0 Mbps" below 0.05 Mbps.
     static func network(_ bytesPerSecond: Double) -> String {
         let mbps = bytesPerSecond * 8 / 1e6
-        return mbps < 0.05 ? "0 Mbps" : String(format: "%.1f Mbps", mbps)
+        if mbps < 0.05 { return "0 Mbps" }
+        return String(format: mbps >= 100 ? "%.0f Mbps" : "%.1f Mbps", mbps)
     }
 
     /// Memory either as a size ("1.5 GB") or as a share of installed RAM ("9.3%").
