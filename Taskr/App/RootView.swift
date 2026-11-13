@@ -28,6 +28,7 @@ struct RootView: View {
             switch selection ?? .processes {
             case .processes: ProcessesPage(store: processes, onGoToDetails: { _ in selection = .details })
             case .appHistory: AppHistoryPage(store: history)
+            case .users: UsersPage(store: processes)
             case .startup: StartupPage(store: startup, history: history)
             case .performance: PerformancePage(store: performance)
             case let p: ShellPage(page: p)

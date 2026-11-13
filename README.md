@@ -246,6 +246,10 @@ Disable and Enable run `launchctl disable|enable gui/<uid>/<label>` for launch a
 - **Views stay presentational.** Formatting lives in `ProcessFormat`, thresholds in `Heat`, widths in `ProcessColumn`, state in `ProcessStore`.
 - **No third-party dependencies.**
 
+## How Users works
+
+Processes are grouped by owning account (`proc_pidinfo` uid, cached in `ProcessOwners`). Real accounts (uid 500+) get their own row; root and `_` service accounts roll into one "System" row. Each user's processes are listed as apps with CPU, memory, disk and network. The console user shows "Active". Taskr can only sample processes macOS lets it read, so other users' and root's processes may be missing. "Switch user…" shows the login window with `CGSession -suspend`.
+
 ## Status
 
 | Page | Status |
@@ -254,10 +258,11 @@ Disable and Enable run `launchctl disable|enable gui/<uid>/<label>` for launch a
 | Performance (CPU, Memory, Disk, Network, GPU) | Done |
 | App history | Done (records only while Taskr runs) |
 | Startup apps | Done (impact is an estimate) |
-| Users, Details, Services, Settings | Not built (placeholder) |
+| Users | Built |
+| Details, Services, Settings | Not built (placeholder) |
 
 Planned next:
 
-- Users, Details, Services and Settings pages.
+- Details, Services and Settings pages.
 - Unit tests for grouping, row building and formatting.
 - Show App Nap in the Status column.

@@ -24,7 +24,9 @@ enum ProcessGrouping {
     /// - Parameter regularApps: Bundle path → display name for running Dock apps. A group whose bundle
     ///   is in this map is an app; otherwise it is classified by where its executable lives.
     static func build(_ snapshots: [ProcessSnapshot], regularApps: [String: String]) -> [ProcessGroup] {
-        ProcessPaths.prune(alive: Set(snapshots.map(\.pid)))
+        let alive = Set(snapshots.map(\.pid))
+        ProcessPaths.prune(alive: alive)
+        ProcessOwners.prune(alive: alive)
         var groups: [String: ProcessGroup] = [:]
 
         for snapshot in snapshots {
