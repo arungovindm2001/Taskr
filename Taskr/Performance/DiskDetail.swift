@@ -2,57 +2,76 @@
 //  DiskDetail.swift
 //  Taskr
 //
-//  The Disk page: active-time and transfer-rate graphs, latency, and the startup volume's facts.
+//  The Disk page for one physical disk: active-time and transfer-rate graphs, latency, and the disk's facts.
 //
 
 import SwiftUI
 
-/// Disk detail panel.
+/// Disk detail panel. Shown once per physical disk (internal SSD, each external drive).
 struct DiskDetail: View {
     let store: PerformanceStore
+    /// BSD name of the disk to show, e.g. "disk0".
+    let diskID: String
 
     var body: some View {
-        let transferMax = PerformanceFormat.niceMax(max(store.diskRead.peak, store.diskWrite.peak), floor: 1_000_000)
-        PerformanceDetail(title: store.diskTitle, subtitle: kind, stats: stats, facts: facts) {
+        if let disk = store.disks.first(where: { $0.id == diskID }) {
+            content(for: disk)
+        }
+    }
+
+    private func content(for disk: PhysicalDisk) -> some View {
+        let history = store.diskHistory[disk.id] ?? DiskHistory()
+        let transferMax = PerformanceFormat.niceMax(max(history.read.peak, history.write.peak), floor: 1_000_000)
+        return PerformanceDetail(title: store.diskTitle(disk), subtitle: disk.model ?? (disk.isInternal ? "Internal disk" : "External disk"),
+                                 stats: stats(history.latest), facts: facts(for: disk)) {
             VStack(spacing: 14) {
                 GraphSection(title: "Active time", maxLabel: "100%", maxValue: 100,
-                             series: [GraphSeries(values: store.diskActive.values, line: GraphPalette.readLine,
+                             series: [GraphSeries(values: history.active.values, line: GraphPalette.readLine,
                                                   fill: GraphPalette.readFill, fillOpacity: 0.22)],
                              height: 150, border: GraphPalette.readFill)
                 GraphSection(title: "Disk transfer rate",
                              legend: [LegendItem(color: GraphPalette.readFill, label: "Read"),
                                       LegendItem(color: GraphPalette.writeFill, label: "Write")],
                              maxLabel: PerformanceFormat.rate(transferMax), maxValue: transferMax,
-                             series: [GraphSeries(values: store.diskRead.values, line: GraphPalette.readLine,
+                             series: [GraphSeries(values: history.read.values, line: GraphPalette.readLine,
                                                   fill: GraphPalette.readFill, fillOpacity: 0.2),
-                                      GraphSeries(values: store.diskWrite.values, line: GraphPalette.writeLine,
+                                      GraphSeries(values: history.write.values, line: GraphPalette.writeLine,
                                                   fill: GraphPalette.writeFill, fillOpacity: 0.2)],
                              height: 150, border: GraphPalette.readFill)
             }
         }
     }
 
-    /// Internal Apple silicon storage is always NVMe flash; elsewhere we only know internal vs external.
-    private var kind: String {
-        let internalDisk = store.storage.isInternal ?? true
-        if internalDisk && store.hardware.isAppleSilicon { return "Internal SSD" }
-        return internalDisk ? "Internal disk" : "External disk"
+    private func stats(_ latest: DiskSample?) -> [PerformanceStat] {
+        [PerformanceStat(label: "Active time", value: PerformanceFormat.percent(latest?.active ?? 0)),
+         PerformanceStat(label: "Avg response time", value: latest?.latencyMs.map { String(format: "%.1f ms", $0) } ?? "–"),
+         PerformanceStat(label: "Read speed", value: PerformanceFormat.rate(latest?.read ?? 0)),
+         PerformanceStat(label: "Write speed", value: PerformanceFormat.rate(latest?.write ?? 0))]
     }
 
-    private var stats: [PerformanceStat] {
-        let s = store.latest
-        return [PerformanceStat(label: "Active time", value: PerformanceFormat.percent(s?.diskActive ?? 0)),
-                PerformanceStat(label: "Avg response time", value: s?.diskLatencyMs.map { String(format: "%.1f ms", $0) } ?? "–"),
-                PerformanceStat(label: "Read speed", value: PerformanceFormat.rate(s?.diskRead ?? 0)),
-                PerformanceStat(label: "Write speed", value: PerformanceFormat.rate(s?.diskWrite ?? 0))]
+    private func facts(for disk: PhysicalDisk) -> [PerformanceFact] {
+        [PerformanceFact(label: "Capacity", value: PerformanceFormat.capacity(disk.sizeBytes)),
+         PerformanceFact(label: "Available", value: PerformanceFormat.capacity(disk.availableBytes)),
+         PerformanceFact(label: "System disk", value: disk.isSystem ? "Yes" : "No"),
+         PerformanceFact(label: "Type", value: typeDescription(of: disk)),
+         PerformanceFact(label: "Encryption", value: encryption(of: disk))]
     }
 
-    private var facts: [PerformanceFact] {
-        let storage = store.storage
-        return [PerformanceFact(label: "Capacity", value: storage.capacity.map(PerformanceFormat.capacity) ?? "–"),
-                PerformanceFact(label: "Available", value: storage.available.map(PerformanceFormat.capacity) ?? "–"),
-                PerformanceFact(label: "System disk", value: "Yes"),
-                PerformanceFact(label: "Type", value: store.hardware.isAppleSilicon && (storage.isInternal ?? true) ? "SSD (NVMe)" : kind),
-                PerformanceFact(label: "Encryption", value: store.fileVault.map { $0 ? "FileVault on" : "FileVault off" } ?? "–")]
+    /// "SSD (NVMe)" for the built-in drive on Apple silicon; otherwise "SSD (USB)", "HDD (USB)" and so on.
+    private func typeDescription(of disk: PhysicalDisk) -> String {
+        if disk.isInternal && store.hardware.isAppleSilicon { return "SSD (NVMe)" }
+        let kind = disk.isSolidState.map { $0 ? "SSD" : "HDD" }
+        switch (kind, disk.interconnect) {
+        case let (kind?, link?): return "\(kind) (\(link))"
+        case let (kind?, nil): return kind
+        case let (nil, link?): return link
+        default: return "–"
+        }
+    }
+
+    /// FileVault state for the startup disk (from `fdesetup`); the volumes' own encryption flag for other disks.
+    private func encryption(of disk: PhysicalDisk) -> String {
+        if disk.isSystem { return store.fileVault.map { $0 ? "FileVault on" : "FileVault off" } ?? "–" }
+        return disk.isEncrypted ? "Encrypted" : "Not encrypted"
     }
 }

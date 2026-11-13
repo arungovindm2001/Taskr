@@ -19,9 +19,8 @@ final class PerformanceStore {
     var cpu = MetricHistory()            // total %
     var cpuSystem = MetricHistory()      // system share, %
     var memory = MetricHistory()         // % of RAM in use
-    var diskActive = MetricHistory()     // %
-    var diskRead = MetricHistory()       // bytes per second
-    var diskWrite = MetricHistory()
+    /// Per-disk history, by BSD name ("disk0").
+    var diskHistory: [String: DiskHistory] = [:]
     var netIn = MetricHistory()          // bytes per second
     var netOut = MetricHistory()
     var gpu = MetricHistory()            // %
@@ -40,12 +39,18 @@ final class PerformanceStore {
     // MARK: Slow-changing facts
 
     var network: NetworkInfo?
-    var storage = StorageInfo.read()
+    /// Physical disks and their volumes; refreshed every few seconds so plugging a drive in shows up.
+    var disks = PhysicalDisks.list()
     /// `nil` until `fdesetup` answers (or if it can't be read).
     var fileVault: Bool?
 
     let hardware = HardwareInfo.current
     let gpuInfo = GPUInfo.current
+
+    /// Everything the device list shows, in order. Each physical disk gets its own entry.
+    var devices: [PerformanceDevice] {
+        [.cpu, .memory] + disks.map { .disk($0.id) } + [.network, .gpu]
+    }
 
     private let stats = SystemStats()
 
@@ -54,14 +59,14 @@ final class PerformanceStore {
     /// Samples once a second. Runs until cancelled.
     func run() async {
         network = NetworkInfo.read()
-        Task { fileVault = await Task.detached { StorageInfo.fileVaultEnabled() }.value }
+        Task { fileVault = await Task.detached { FileVault.isEnabled() }.value }
 
         var tick = 0
         while !Task.isCancelled {
             sample()
             if tick % 5 == 4 {   // addresses, signal and free space change slowly
                 network = NetworkInfo.read()
-                storage = StorageInfo.read()
+                disks = await Task.detached { PhysicalDisks.list() }.value
             }
             tick += 1
             try? await Task.sleep(for: .seconds(1))
@@ -74,9 +79,7 @@ final class PerformanceStore {
             cpu.append(s.cpu)
             cpuSystem.append(s.cpuSystem)
             memory.append(s.memPct)
-            diskActive.append(s.diskActive)
-            diskRead.append(s.diskRead)
-            diskWrite.append(s.diskWrite)
+            for (id, sample) in s.disks { diskHistory[id, default: DiskHistory()].append(sample) }
             netIn.append(s.netIn)
             netOut.append(s.netOut)
         }

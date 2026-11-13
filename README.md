@@ -105,7 +105,8 @@ Taskr/                       Repository root (Xcode project lives here)
     │   ├── SystemStats.swift        Whole-machine CPU, memory breakdown, disk, network
     │   ├── Sysctl.swift             Typed sysctl reads
     │   ├── HardwareInfo.swift       Chip name, core layout, RAM, page size
-    │   ├── StorageInfo.swift        Startup volume capacity, format, FileVault
+    │   ├── PhysicalDisks.swift      Physical disks, their mounted volumes and per-disk I/O counters
+    │   ├── FileVault.swift          FileVault status for the startup disk
     │   ├── NetworkInfo.swift        Primary adapter, addresses, Wi-Fi details
     │   ├── GPUDevice.swift          Whole-GPU utilization, memory, Metal info
     │   ├── ProcessCounts.swift      Process and thread totals
@@ -176,8 +177,8 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 |---|---|
 | CPU user / system / total | `host_statistics` tick deltas |
 | Memory in use, wired, compressed, cached | `host_statistics64`; swap from `vm.swapusage`; pressure from `kern.memorystatus_vm_pressure_level` |
-| Disk active time, throughput, response time | IOKit `IOBlockStorageDriver` statistics (bytes, operations, total time) |
-| Capacity, available, format | `URLResourceValues` on `/`; FileVault from `fdesetup status` |
+| Disk active time, throughput, response time | IOKit `IOBlockStorageDriver` statistics (bytes, operations, total time), one set per physical disk |
+| Disks and volumes | One Disk card per physical disk (internal, USB, Thunderbolt). Volumes are mapped to their disk by walking the IORegistry parents from each mounted volume (via DiskArbitration). Disk images are skipped. Capacity from `IOMedia`, free space from `URLResourceValues`; FileVault from `fdesetup status` for the startup disk |
 | Network throughput | `sysctl(NET_RT_IFLIST2)` on `en*` |
 | Adapter, IP addresses, Wi-Fi standard and signal | `getifaddrs`, CoreWLAN |
 | GPU utilization, renderer, tiler, memory | IORegistry `IOAccelerator` `PerformanceStatistics`; core count and name via Metal |
@@ -210,6 +211,7 @@ Why the header totals don't sum the rows: per-process memory footprints overlap 
 - **Other users' processes.** macOS only lets you change priority of, signal or sample processes you own. Taskr shows a message when an action is refused. Some processes report no path or no statistics.
 - **`nettop` per-process network** relies on a system tool whose output format could change. Totals in the header do not depend on it.
 - **Performance page gaps.** Without root, macOS exposes no CPU clock speed or temperature on Apple silicon, so the CPU page shows the load average and the thermal state instead. GPU frequency, power state and media engine load are likewise unavailable. The renderer and tiler graphs appear only if the GPU driver reports them.
+- **Disk active time** is the share of each second that requests were in flight. The driver adds up the time of concurrent requests, so a busy SSD with deep queues can read higher than Activity Monitor or Windows would.
 - **Wi-Fi network name** needs Location permission, so it shows "–" until that is granted.
 - **App Nap** is not shown in the Status column.
 

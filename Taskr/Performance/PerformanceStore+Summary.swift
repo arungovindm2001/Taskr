@@ -22,7 +22,7 @@ extension PerformanceStore {
         switch device {
         case .cpu: cpuSummary
         case .memory: memorySummary
-        case .disk: diskSummary
+        case .disk(let id): diskSummary(id)
         case .network: networkSummary
         case .gpu: gpuSummary
         }
@@ -43,9 +43,11 @@ extension PerformanceStore {
         return DeviceSummary(name: "Memory", subtitle: subtitle, values: memory.values, maxValue: 100)
     }
 
-    private var diskSummary: DeviceSummary {
-        DeviceSummary(name: diskTitle, subtitle: PerformanceFormat.percent(diskActive.last ?? 0),
-                      values: diskActive.values, maxValue: 100)
+    private func diskSummary(_ id: String) -> DeviceSummary {
+        let history = diskHistory[id] ?? DiskHistory()
+        let title = disks.first { $0.id == id }.map(diskTitle) ?? id
+        return DeviceSummary(name: title, subtitle: PerformanceFormat.percent(history.active.last ?? 0),
+                             values: history.active.values, maxValue: 100)
     }
 
     private var networkSummary: DeviceSummary {
@@ -61,8 +63,12 @@ extension PerformanceStore {
 
     // MARK: Titles
 
-    /// "Disk 0 (APFS)".
-    var diskTitle: String { "Disk 0 (\(storage.format ?? "Disk"))" }
+    /// "Disk 0 (Macintosh HD)", "Disk 1 (Backup, Photos)". Disks are numbered in list order, internal first.
+    func diskTitle(_ disk: PhysicalDisk) -> String {
+        let number = disks.firstIndex { $0.id == disk.id } ?? 0
+        let names = disk.volumes.prefix(2).map(\.name).joined(separator: ", ")
+        return "Disk \(number) (\(names.isEmpty ? disk.id : names))"
+    }
 
     /// "Wi-Fi (en0)", "Ethernet (en0)", or just "Network" with no adapter.
     var networkTitle: String {

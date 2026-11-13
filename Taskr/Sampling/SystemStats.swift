@@ -43,12 +43,8 @@ nonisolated final class SystemStats {
         var memory: Memory
         /// Bytes per second across all physical storage.
         var disk: Double
-        var diskRead: Double
-        var diskWrite: Double
-        /// % of the interval the storage had at least one request in flight (capped at 100).
-        var diskActive: Double
-        /// Average time per request in milliseconds, if any requests completed.
-        var diskLatencyMs: Double?
+        /// Activity on each physical disk, by BSD name ("disk0").
+        var disks: [String: DiskSample]
         /// Bytes per second over Ethernet / Wi-Fi (`en*`) interfaces.
         var net: Double
         var netIn: Double
@@ -58,15 +54,10 @@ nonisolated final class SystemStats {
     // MARK: Counters
 
     private struct CPUTicks { var user: UInt64, system: UInt64, idle: UInt64, nice: UInt64 }
-    private struct DiskCounters {
-        var bytesRead: UInt64 = 0, bytesWritten: UInt64 = 0
-        var opsRead: UInt64 = 0, opsWritten: UInt64 = 0
-        var busyNanoseconds: UInt64 = 0
-    }
     private struct NetCounters { var received: UInt64 = 0, sent: UInt64 = 0 }
 
     private var prevCPU: CPUTicks?
-    private var prevDisk: DiskCounters?
+    private var prevDisk: [String: DiskCounters]?
     private var prevNet: NetCounters?
     private var prevTime: UInt64 = 0
     private let physical = Double(ProcessInfo.processInfo.physicalMemory)
@@ -75,7 +66,7 @@ nonisolated final class SystemStats {
     func sample() -> Snapshot? {
         let now = DispatchTime.now().uptimeNanoseconds
         let cpu = cpuTicks()
-        let disk = diskCounters()
+        let disk = PhysicalDisks.counters()
         let net = netCounters()
         defer { prevCPU = cpu; prevDisk = disk; prevNet = net; prevTime = now }
 
@@ -92,12 +83,18 @@ nonisolated final class SystemStats {
         // Memory
         let memory = memoryBreakdown()
 
-        // Disk
-        let read = Double(delta(disk.bytesRead, pd.bytesRead)) / secs
-        let write = Double(delta(disk.bytesWritten, pd.bytesWritten)) / secs
-        let ops = delta(disk.opsRead, pd.opsRead) + delta(disk.opsWritten, pd.opsWritten)
-        let busy = Double(delta(disk.busyNanoseconds, pd.busyNanoseconds))
-        let latency: Double? = ops > 0 ? busy / Double(ops) / 1e6 : nil
+        // Disk, per physical disk
+        var disks: [String: DiskSample] = [:]
+        for (id, counters) in disk {
+            guard let before = pd[id] else { continue }
+            let ops = delta(counters.opsRead, before.opsRead) + delta(counters.opsWritten, before.opsWritten)
+            let busy = Double(delta(counters.busyNanoseconds, before.busyNanoseconds))
+            disks[id] = DiskSample(read: Double(delta(counters.bytesRead, before.bytesRead)) / secs,
+                                   write: Double(delta(counters.bytesWritten, before.bytesWritten)) / secs,
+                                   active: min(busy / nanos * 100, 100),
+                                   latencyMs: ops > 0 ? busy / Double(ops) / 1e6 : nil)
+        }
+        let diskTotal = disks.values.reduce(0) { $0 + $1.read + $1.write }
 
         // Network
         let rx = Double(delta(net.received, pn.received)) / secs
@@ -105,8 +102,7 @@ nonisolated final class SystemStats {
 
         return Snapshot(cpu: userPct + systemPct, cpuUser: userPct, cpuSystem: systemPct,
                         memPct: physical > 0 ? min(Double(memory.used) / physical, 1) * 100 : 0, memory: memory,
-                        disk: read + write, diskRead: read, diskWrite: write,
-                        diskActive: min(busy / nanos * 100, 100), diskLatencyMs: latency,
+                        disk: diskTotal, disks: disks,
                         net: rx + tx, netIn: rx, netOut: tx)
     }
 
@@ -158,34 +154,6 @@ nonisolated final class SystemStats {
         default: memory.pressure = .normal
         }
         return memory
-    }
-
-    // MARK: Disk
-
-    /// Cumulative bytes, operations and busy time across every `IOBlockStorageDriver`.
-    private func diskCounters() -> DiskCounters {
-        var iterator: io_iterator_t = 0
-        guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IOBlockStorageDriver"), &iterator) == KERN_SUCCESS else {
-            return DiskCounters()
-        }
-        defer { IOObjectRelease(iterator) }
-
-        var total = DiskCounters()
-        var entry = IOIteratorNext(iterator)
-        while entry != 0 {
-            if let stats = IORegistryEntryCreateCFProperty(entry, "Statistics" as CFString, kCFAllocatorDefault, 0)?
-                .takeRetainedValue() as? [String: Any] {
-                func value(_ key: String) -> UInt64 { (stats[key] as? NSNumber)?.uint64Value ?? 0 }
-                total.bytesRead += value("Bytes (Read)")
-                total.bytesWritten += value("Bytes (Write)")
-                total.opsRead += value("Operations (Read)")
-                total.opsWritten += value("Operations (Write)")
-                total.busyNanoseconds += value("Total Time (Read)") + value("Total Time (Write)")
-            }
-            IOObjectRelease(entry)
-            entry = IOIteratorNext(iterator)
-        }
-        return total
     }
 
     // MARK: Network

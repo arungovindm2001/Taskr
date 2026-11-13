@@ -7,11 +7,11 @@
 
 import SwiftUI
 
-/// A device in the Performance page's list.
-enum PerformanceDevice: String, CaseIterable, Identifiable {
-    case cpu, memory, disk, network, gpu
+/// A device in the Performance page's list. There is one `.disk` per physical disk, identified by its BSD name.
+enum PerformanceDevice: Hashable, Identifiable {
+    case cpu, memory, disk(String), network, gpu
 
-    var id: String { rawValue }
+    var id: Self { self }
 
     /// Accent color for the device's card and main graph.
     var tint: Color {

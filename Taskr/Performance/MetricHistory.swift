@@ -26,3 +26,18 @@ struct MetricHistory {
         if values.count > Self.capacity { values.removeFirst(values.count - Self.capacity) }
     }
 }
+
+/// The graphs and latest reading for one physical disk.
+struct DiskHistory {
+    var active = MetricHistory()   // %
+    var read = MetricHistory()     // bytes per second
+    var write = MetricHistory()
+    var latest: DiskSample?
+
+    mutating func append(_ sample: DiskSample) {
+        active.append(sample.active)
+        read.append(sample.read)
+        write.append(sample.write)
+        latest = sample
+    }
+}
